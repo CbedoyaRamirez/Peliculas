@@ -1,8 +1,9 @@
 import React, { Component } from "react";
-import { FormControl, FormGroup, FormLabel, Button } from "react-bootstrap";
+import { FormGroup, FormLabel } from "react-bootstrap";
 //import TarjetaPelicula from './TarjetaPelicula';
-import axios from "axios";
 import "./Peliculas.css";
+import MovieRow from "./MovieRow.js";
+import $ from "jquery";
 
 export default class Peliculas extends Component {
   constructor(props) {
@@ -13,8 +14,30 @@ export default class Peliculas extends Component {
       usuario: String,
       clave: String
     };
+  }
 
-    this.buscarPeliculas = this.buscarPeliculas.bind(this);
+  performSearch(searchTerm) {
+    const urlString = "http://www.omdbapi.com/?apikey=f12ba140&s=" + searchTerm;
+    $.ajax({
+      url: urlString,
+      success: searchResults => {
+        const results = searchResults.Search;
+
+        var movieRows = [];
+
+        if (searchResults.Response === "True") {
+          results.forEach(movie => {
+            const movieRow = <MovieRow key={movie.imdbID} movie={movie} />;
+            movieRows.push(movieRow);
+          });
+
+          this.setState({ rows: movieRows });
+        }
+      },
+      error: (xhr, status, err) => {
+        console.error("Error");
+      }
+    });
   }
 
   componentDidMount() {
@@ -22,54 +45,29 @@ export default class Peliculas extends Component {
       usuario: localStorage.getItem("usuario"),
       clave: localStorage.getItem("clave")
     });
-    console.log(localStorage.getItem("usuario"));
   }
 
-  buscarPeliculas() {
-    var url = `http://www.omdbapi.com/?apikey=f12ba140&s=${this.state.nombrePelicula}`;
-    axios.get(url)
-      .then(res => this.actualizarEstado(res, this.state.nombrePelicula))
-  }
-
-
-  actualizarEstado = (result, nombre) => {
-    console.log(result)
-    this.setState({
-      peliculas: result.data.Title 
-    })
-    window.location.reload(false);
-  }
-
-
-  updateSearch(nombrePelicula) {
-    this.setState({
-      nombrePelicula
-    });
+  buscarPeliculas(event) {
+    const boundObject = this;
+    const searchTerm = event.target.value;
+    boundObject.performSearch(searchTerm);
   }
 
   render() {
     return (
-      
       <div className="App-header">
         <FormLabel> Bienvenido {this.state.usuario} </FormLabel>
         <br />
         <br />
         <br />
         <FormGroup controlId="nombrePelicula">
-          <FormControl
-            value={this.state.nombrePelicula}
-            ref="query"
+          <input
             placeholder="Buscar Peliculas"
-            onChange={e => {
-              this.updateSearch(e.target.value);
-            }}
+            onChange={this.buscarPeliculas.bind(this)}
           />
-          <Button onClick={this.buscarPeliculas}>Buscar</Button>
         </FormGroup>
 
-        <ul>
-          <li key={this.state.peliculas}> {this.state.peliculas} </li>
-        </ul>
+        {this.state.rows}
       </div>
     );
   }
